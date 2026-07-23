@@ -18,7 +18,7 @@ class InputScreen extends StatelessWidget {
         slivers: [
           SliverAppBar(
             pinned: true,
-            expandedHeight: 148,
+            expandedHeight: 140,
             backgroundColor: AppColors.deepGreen,
             actions: [
               TextButton(
@@ -31,49 +31,73 @@ class InputScreen extends StatelessWidget {
                 child: const Text('清空', style: TextStyle(color: Colors.white70)),
               ),
             ],
-            flexibleSpace: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.deepGreen, AppColors.fieldGreen],
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 72, 18),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '体彩大乐透 · 前区 5 红 + 后区 2 蓝',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.82),
-                            fontSize: 13,
-                            letterSpacing: 0.5,
-                            height: 1.4,
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                final settings = context
+                    .dependOnInheritedWidgetOfExactType<
+                        FlexibleSpaceBarSettings>();
+                final min = settings?.minExtent ?? kToolbarHeight;
+                final max = settings?.maxExtent ?? 140;
+                final cur = settings?.currentExtent ?? max;
+                final t = ((cur - min) / (max - min)).clamp(0.0, 1.0);
+
+                return ClipRect(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.deepGreen, AppColors.fieldGreen],
+                      ),
+                    ),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            8,
+                            72,
+                            12 + 6 * t,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (t > 0.35)
+                                Opacity(
+                                  opacity: ((t - 0.35) / 0.65).clamp(0.0, 1.0),
+                                  child: Text(
+                                    '体彩大乐透 · 前区 5 红 + 后区 2 蓝',
+                                    style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.82),
+                                      fontSize: 13,
+                                      letterSpacing: 0.5,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              if (t > 0.35) SizedBox(height: 8 * t),
+                              Text(
+                                '输入 5 注号码',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18 + 4 * t,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          '输入 5 注号码',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                            height: 1.25,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
           SliverPadding(
