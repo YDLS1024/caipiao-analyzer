@@ -4,12 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/draw_check.dart';
+import '../models/history_record.dart';
 import '../models/rule.dart';
 import '../models/ticket.dart';
+import '../services/history_repository.dart';
 import '../services/rule_engine.dart';
 
 class AppState extends ChangeNotifier {
-  AppState() {
+  AppState({HistoryRepository? historyRepo})
+      : _history = historyRepo ?? HistoryRepository.instance {
     tickets = List.generate(Ticket.inputTicketCount, (_) => Ticket.empty());
     rules = [AnalysisRule.sample('rule-sample')];
     officialDraw = OfficialDraw.empty();
@@ -19,14 +22,18 @@ class AppState extends ChangeNotifier {
   static const _rulesKey = 'rules_v1';
   static const _drawKey = 'official_draw_v1';
 
+  final HistoryRepository _history;
+
   late List<Ticket> tickets;
   late List<AnalysisRule> rules;
   late OfficialDraw officialDraw;
 
   final RuleEngine engine = RuleEngine();
   List<RuleResult> lastResults = const [];
+  List<HistoryRecord> history = const [];
 
   Future<void> load() async {
+    await _history.init();
     final prefs = await SharedPreferences.getInstance();
     final tRaw = prefs.getString(_ticketsKey);
     final rRaw = prefs.getString(_rulesKey);
@@ -57,6 +64,7 @@ class AppState extends ChangeNotifier {
           OfficialDraw.fromJson(jsonDecode(dRaw) as Map<String, dynamic>);
     }
 
+    history = await _history.listAll();
     notifyListeners();
   }
 
@@ -74,7 +82,6 @@ class AppState extends ChangeNotifier {
   }
 
   void setTicket(int index, Ticket ticket) {
-    // 未填完时不要排序，避免打乱输入框与号码的对应关系
     tickets[index] = ticket.isComplete ? ticket.sorted() : ticket;
     notifyListeners();
     persist();
@@ -175,4 +182,67 @@ class AppState extends ChangeNotifier {
     if (predicted == null || !officialDraw.isReady) return null;
     return HitCompare.compare(predicted, officialDraw.ticket);
   }
+
+  /// 将当前分析结果写入历史（SQLite / Web JSON）
+  Future<HistoryRecord?> saveCurrentToHistory() async {
+    if (lastResults.isEmpty) return null;
+
+    final preds = <HistoryPrediction>[];
+    for (final r in lastResults) {
+      if (r.ticket == null) continue;
+      final hit = hitOf(r.ticket);
+      preds.add(HistoryPrediction(
+        ruleId: r.rule.id,
+        ruleName: r.rule.name,
+        ticket: r.ticket!,
+        ok: r.ok,
+        warnings: r.warnings,
+        redHits: hit?.redHits,
+        blueHits: hit?.blueHits,
+        prizeHint: hit?.prizeHint,
+      ));
+    }
+    if (preds.isEmpty) return null;
+
+    final record = HistoryRecord.fromAnalysis(
+      inputTickets: tickets,
+      draw: officialDraw,
+      predictions: preds,
+    );
+    final id = await _history.insert(record);
+    history = await _history.listAll();
+    notifyListeners();
+    return history.firstWhere(
+      (e) => e.id == id,
+      orElse: () => HistoryRecord(
+        id: id,
+        createdAt: record.createdAt,
+        period: record.period,
+        inputTickets: record.inputTickets,
+        predictions: record.predictions,
+        officialTicket: record.officialTicket,
+        note: record.note,
+      ),
+    );
+  }
+
+  Future<void> refreshHistory() async {
+    history = await _history.listAll();
+    notifyListeners();
+  }
+
+  Future<void> deleteHistory(int id) async {
+    await _history.delete(id);
+    history = await _history.listAll();
+    notifyListeners();
+  }
+
+  Future<void> clearHistory() async {
+    await _history.clear();
+    history = const [];
+    notifyListeners();
+  }
+
+  String get storageBackendLabel =>
+      kIsWeb ? '本地 JSON（Web）' : 'SQLite';
 }

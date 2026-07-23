@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/history_screen.dart';
 import 'screens/input_screen.dart';
 import 'screens/result_screen.dart';
 import 'screens/rules_screen.dart';
@@ -54,13 +55,14 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    // 不用 IndexedStack：Web 上容易出现鼠标点击落到隐藏页、按钮无响应
     final Widget page;
     switch (_index) {
       case 1:
         page = const RulesScreen();
       case 2:
         page = const ResultScreen();
+      case 3:
+        page = const HistoryScreen();
       default:
         page = const InputScreen();
     }
@@ -87,6 +89,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.analytics_outlined),
             selectedIcon: Icon(Icons.analytics),
             label: '分析',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: '历史',
           ),
         ],
       ),

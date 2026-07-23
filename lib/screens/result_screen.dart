@@ -48,9 +48,34 @@ class ResultScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpace.sm),
+          OutlinedButton.icon(
+            onPressed: results.isEmpty
+                ? null
+                : () async {
+                    final saved = await state.saveCurrentToHistory();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          saved == null
+                              ? '没有可保存的预测号码'
+                              : '已保存到历史（${state.storageBackendLabel}）',
+                        ),
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.history),
+            label: const Text('保存本局到历史'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+              foregroundColor: AppColors.fieldGreen,
+              side: const BorderSide(color: AppColors.fieldGreen),
+            ),
+          ),
+          const SizedBox(height: AppSpace.sm),
           Text(
             state.allTicketsReady
-                ? '每条启用规则生成 1 注，数量与规则一致'
+                ? '每条启用规则生成 1 注；保存后可在「历史」页查看'
                 : '请先在「输入」页完整填写 5 注号码',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   letterSpacing: 0.4,
