@@ -35,7 +35,7 @@
 ## 快速开始
 
 ```bash
-git clone https://github.com/<YOUR_USER>/caipiao-analyzer.git
+git clone https://github.com/YDLS1024/caipiao-analyzer.git
 cd caipiao-analyzer
 flutter pub get
 flutter run
